@@ -1,8 +1,6 @@
 from pathlib import Path
 
 
-
-
 def load_adobe_mark(logo_path=None) -> str:
     """Load local logo SVG if available; otherwise return a safe inline fallback."""
     if logo_path is None:
@@ -38,15 +36,7 @@ def split_safer_next_action(response: str):
     return response, None
 
 
-def _join_list(value):
-    if value is None:
-        return "None"
-    if isinstance(value, list):
-        return ", ".join(str(item) for item in value) if value else "None"
-    return str(value)
-
-
-    def build_decision_rows(result: dict, persona=None):
+def build_decision_rows(result: dict, persona=None):
     """Build PM-friendly audit-ready decision record rows for Streamlit display."""
     tools_used = result.get("tools_used", [])
     if isinstance(tools_used, list):
@@ -61,9 +51,12 @@ def _join_list(value):
         tools_text = str(tools_used)
 
     selected_tables = result.get("selected_tables", [])
-    tables_text = _join_list(selected_tables)
+    if isinstance(selected_tables, list):
+        tables_text = ", ".join(str(item) for item in selected_tables) if selected_tables else "None"
+    else:
+        tables_text = str(selected_tables)
 
-    eval_target = result.get("validation_target") or result.get("eval_target") or {}
+    validation_target = result.get("validation_target") or result.get("eval_target") or {}
     validation_result = result.get("validation_result") or result.get("eval_result") or {}
 
     if validation_result:
@@ -74,10 +67,12 @@ def _join_list(value):
         )
         if not validation_text:
             validation_text = str(validation_result)
-    elif eval_target:
+    elif validation_target:
         validation_text = "Validation target defined"
     else:
         validation_text = "No labeled validation target"
+
+    persona_text = persona or result.get("persona") or "Selected persona"
 
     return [
         {
@@ -87,7 +82,7 @@ def _join_list(value):
         },
         {
             "Step": "Customer scope",
-            "Input": result.get("customer_scope", "Not determined"),
+            "Input": f"{persona_text} → {result.get('customer_scope', 'Not determined')}",
             "Output": result.get("customer_scope", "Not determined"),
         },
         {
@@ -107,7 +102,7 @@ def _join_list(value):
         },
         {
             "Step": "Validation",
-            "Input": str(eval_target) if eval_target else "No labeled target",
+            "Input": str(validation_target) if validation_target else "No labeled target",
             "Output": validation_text,
         },
     ]
