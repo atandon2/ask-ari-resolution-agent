@@ -142,6 +142,13 @@ def test_persona_control_is_above_request_and_drives_fixed_scenario():
     assert source.index('"Maya Patel",') < source.index('"Emily Chen",')
     assert "PERSONA_ORDER," in source
     assert "list(PERSONAS)" not in source
+    assert "st.session_state.persona_selection = PERSONA_ORDER[0]" in source
+    assert (
+        "st.session_state.scenario_selection = PERSONA_SCENARIOS[\n"
+        "        st.session_state.persona_selection\n"
+        "    ]"
+    ) in source
+    assert '"Jason Lee": "E"' in source
     assert '"Emily Chen": "A"' in source
     assert '"Olivia Martinez": "B"' in source
     assert "on_change=_load_persona_scenario" in source
