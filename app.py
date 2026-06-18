@@ -534,7 +534,7 @@ def _render_eval_summary(result: dict[str, object]) -> None:
 
 
 if "persona_selection" not in st.session_state:
-    st.session_state.persona_selection = SCENARIOS["A"]["persona"]
+    st.session_state.persona_selection = PERSONA_ORDER[0]
 if "scenario_selection" not in st.session_state:
     st.session_state.scenario_selection = PERSONA_SCENARIOS[
         st.session_state.persona_selection
