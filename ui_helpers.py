@@ -46,7 +46,7 @@ def _join_list(value):
     return str(value)
 
 
-def build_decision_rows(result: dict):
+    def build_decision_rows(result: dict, persona=None):
     """Build PM-friendly audit-ready decision record rows for Streamlit display."""
     tools_used = result.get("tools_used", [])
     if isinstance(tools_used, list):
