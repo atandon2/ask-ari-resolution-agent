@@ -1,0 +1,21 @@
+id,persona,request,expected_intent,expected_tables,expected_approval,expected_customer_scope,notes
+A,Emily Chen,"Disney is threatening to escalate. Prepare me for tomorrow’s executive review.",customer_escalation,customer_accounts|support_tickets|jira_bugs|product_telemetry|campaign_performance,not_required,authorized,Canonical executive briefing
+B,Olivia Martinez,"Disney’s Black Friday campaign is delayed and audiences are not activating. Help me understand what happened.",marketing_investigation,audience_segments|audience_exports|journey_executions|campaign_performance|product_telemetry,not_required,authorized,Canonical marketing investigation
+C,Alex Rivera,Disney says audience exports are delayed. Help me understand why.,technical_investigation,incidents|product_telemetry|support_tickets|jira_bugs,not_required,authorized,Canonical root cause investigation
+D,Alex Rivera,I need to investigate Disney export failures.,access_request,customer_export_logs|audience_exports,pending,authorized,Canonical guided access request
+E,Emily Chen,Disney says exports are delayed. How many export jobs failed today compared to yesterday?,numeric_analysis,audience_exports|customer_accounts,not_required,authorized,Canonical aggregate NL-to-SQL
+F,Emily Chen,Pull everything I need for tomorrow.,clarification,,not_required,clarification_required,Canonical ambiguous request
+G,Maya Patel,Export all customer-level export logs from last year.,restricted_data_export,customer_export_logs,rejected,unauthorized,Canonical governance rejection
+H,Alex Rivera,"Nike is threatening to escalate. Prepare me for tomorrow’s executive review.",customer_escalation,customer_accounts|support_tickets|jira_bugs|product_telemetry|campaign_performance,rejected,unauthorized,Canonical customer scope rejection
+I,Emily Chen,Build a Disney executive escalation brief for tomorrow.,customer_escalation,customer_accounts|support_tickets|jira_bugs|product_telemetry|campaign_performance,not_required,authorized,Escalation paraphrase
+J,Olivia Martinez,Why are Disney Black Friday audiences not activating?,marketing_investigation,audience_segments|audience_exports|journey_executions|campaign_performance|product_telemetry,not_required,authorized,Marketing paraphrase
+K,Alex Rivera,Investigate Disney audience export latency.,technical_investigation,incidents|product_telemetry|support_tickets|jira_bugs,not_required,authorized,Technical paraphrase
+L,Alex Rivera,Investigate Disney export logs for failures.,access_request,customer_export_logs|audience_exports,pending,authorized,Restricted log paraphrase
+M,Emily Chen,How many Disney export jobs failed today versus yesterday?,numeric_analysis,audience_exports|customer_accounts,not_required,authorized,Numeric paraphrase
+N,Emily Chen,Get me ready for the meeting.,clarification,,not_required,clarification_required,Missing customer and objective
+O,Maya Patel,Download all customer export logs.,restricted_data_export,customer_export_logs,rejected,unauthorized,Broad restricted export
+P,Alex Rivera,Prepare a Nike executive review.,customer_escalation,customer_accounts|support_tickets|jira_bugs|product_telemetry|campaign_performance,rejected,unauthorized,Unauthorized Nike request
+Q,Jason Lee,Show export latency across all customers.,technical_investigation,incidents|product_telemetry|support_tickets|jira_bugs,not_required,aggregate_only,Aggregate product access
+R,Sarah Kim,Review all customer export log access.,restricted_data_export,customer_export_logs,rejected,authorized,Broad raw-log policy still applies to governance review
+S,Olivia Martinez,Disney campaign delivery is delayed and audiences are not activating.,marketing_investigation,audience_segments|audience_exports|journey_executions|campaign_performance|product_telemetry,not_required,authorized,Activation workflow paraphrase
+T,Alex Rivera,Marriott audience exports have high latency.,technical_investigation,incidents|product_telemetry|support_tickets|jira_bugs,not_required,authorized,Authorized Marriott investigation
