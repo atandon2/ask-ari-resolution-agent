@@ -24,6 +24,9 @@ def test_response_first_internal_layout_contract():
     assert "What the agent inferred / output" in helper_source
     assert "st.set_page_config" in source
     assert 'layout="wide"' in source
+    assert ".block-container { max-width: 1180px; padding-top: 3.25rem;" in source
+    assert ".cloud-top-spacer { height: .35rem; }" in source
+    assert '<div class="cloud-top-spacer"></div>' in source
     assert "st.sidebar" not in source
     assert "Load scenario" not in source
     assert "Enterprise workflow sandbox · V0" not in source
@@ -70,6 +73,8 @@ def test_response_first_internal_layout_contract():
     assert "audit-summary-grid" in source
     assert "eval-result-grid" in source
     assert "st.table(build_decision_rows(result, persona))" in source
+    assert "load_adobe_mark(Path(__file__).parent / \"assets\" / \"adobe-mark.svg\")" in source
+    assert "adobe-mark.svg\").read_text" not in source
     assert "matrix org" in source
     assert "pings the right teams" in source
     assert "Ari can act for" in source
@@ -137,6 +142,13 @@ def test_persona_control_is_above_request_and_drives_fixed_scenario():
     assert source.index('"Maya Patel",') < source.index('"Emily Chen",')
     assert "PERSONA_ORDER," in source
     assert "list(PERSONAS)" not in source
+    assert "st.session_state.persona_selection = PERSONA_ORDER[0]" in source
+    assert (
+        "st.session_state.scenario_selection = PERSONA_SCENARIOS[\n"
+        "        st.session_state.persona_selection\n"
+        "    ]"
+    ) in source
+    assert '"Jason Lee": "E"' in source
     assert '"Emily Chen": "A"' in source
     assert '"Olivia Martinez": "B"' in source
     assert "on_change=_load_persona_scenario" in source
