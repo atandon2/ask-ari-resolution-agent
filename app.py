@@ -9,7 +9,7 @@ import streamlit as st
 
 from agent import SCENARIOS, run_agent
 from tools import PERSONAS
-from ui_helpers import build_decision_rows, split_safer_next_action
+from ui_helpers import build_decision_rows, load_adobe_mark, split_safer_next_action
 
 
 PERSONA_SCENARIOS = {
@@ -56,12 +56,13 @@ st.markdown(
     .stApp { background: var(--canvas); color: var(--ink); }
     .stApp ::selection { background: rgba(217, 41, 32, .16); color: var(--ink); }
     [data-testid="stHeader"] { background: rgba(247, 247, 245, .9); }
-    .block-container { max-width: 1180px; padding-top: 2rem; padding-bottom: 4rem; }
+    .block-container { max-width: 1180px; padding-top: 3.25rem; padding-bottom: 4rem; }
     h1, h2, h3, p, label { font-family: "Helvetica Neue", Arial, sans-serif; }
     h1 { color: var(--ink); letter-spacing: -.035em; font-size: 2.55rem !important; font-weight: 680 !important; }
     h2 { letter-spacing: -.02em; }
     h3 { color: var(--ink); font-size: 1.08rem !important; letter-spacing: -.01em; }
     .internal-header { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: .68rem; }
+    .cloud-top-spacer { height: .35rem; }
     .adobe-mark { width: 32px; height: 28px; flex: 0 0 auto; margin-top: .12rem; }
     .internal-lockup {
         color: var(--ink); font-family: "Helvetica Neue", Arial, sans-serif;
@@ -411,7 +412,7 @@ st.markdown(
     }
     [data-testid="stExpander"] details { border-color: var(--border); background: rgba(255,255,255,.42); }
     @media (max-width: 760px) {
-        .block-container { padding-top: 1.35rem; }
+        .block-container { padding-top: 2.3rem; }
         .internal-lockup { font-size: 1.12rem; }
         .request-panel-shell { display: block; }
         .agent-orb { margin-bottom: .65rem; }
@@ -546,9 +547,8 @@ if "last_result" not in st.session_state:
     st.session_state.last_result = None
 
 
-logo_svg = (Path(__file__).parent / "assets" / "adobe-mark.svg").read_text(
-    encoding="utf-8"
-)
+logo_svg = load_adobe_mark(Path(__file__).parent / "assets" / "adobe-mark.svg")
+st.markdown('<div class="cloud-top-spacer"></div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="internal-header">'
     f'<div class="adobe-mark">{logo_svg}</div>'
