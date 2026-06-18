@@ -1,9 +1,14 @@
 from pathlib import Path
 
 
-def load_adobe_mark() -> str:
+
+
+def load_adobe_mark(logo_path=None) -> str:
     """Load local logo SVG if available; otherwise return a safe inline fallback."""
-    logo_path = Path(__file__).parent / "assets" / "adobe-mark.svg"
+    if logo_path is None:
+        logo_path = Path(__file__).parent / "assets" / "adobe-mark.svg"
+    else:
+        logo_path = Path(logo_path)
 
     if logo_path.exists():
         return logo_path.read_text(encoding="utf-8")
