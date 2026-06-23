@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import html
+import os
 from pathlib import Path
 
 import streamlit as st
 
 from agent import SCENARIOS, run_agent
 from tools import PERSONAS
+from tracing import enable_arize_tracing, flush_arize_tracing
 from ui_helpers import build_decision_rows, load_adobe_mark, split_safer_next_action
 
 
@@ -31,12 +33,47 @@ PERSONA_ORDER = [
 ]
 
 
+def _local_tracing_requested() -> bool:
+    return os.getenv("ASK_ARI_ENABLE_ARIZE_TRACING", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _enable_local_tracing_if_requested() -> None:
+    if not _local_tracing_requested():
+        return
+    if st.session_state.get("_ask_ari_local_tracing_status"):
+        return
+    st.session_state._ask_ari_local_tracing_status = enable_arize_tracing()
+
+
+def _render_local_trace_export_status() -> None:
+    if not _local_tracing_requested():
+        return
+    status = st.session_state.get("_ask_ari_local_tracing_status", {})
+    if status.get("enabled"):
+        st.caption(
+            "Local trace export enabled for project: "
+            f"{status.get('project_name', 'ask-ari-resolution-agent')}"
+        )
+    else:
+        st.warning(
+            "Local trace export requested but not connected. "
+            f"{status.get('message', 'Check local tracing environment variables.')}"
+        )
+
+
 st.set_page_config(
     page_title="Adobe Enterprise Resolution Agent",
     page_icon="◼",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+_enable_local_tracing_if_requested()
 
 
 st.markdown(
@@ -558,6 +595,7 @@ st.markdown(
     "Customer data access, approvals, and audit trails are governed by Adobe IT.</div></div></div>",
     unsafe_allow_html=True,
 )
+_render_local_trace_export_status()
 
 
 with st.container(key="session_context_band", border=False):
@@ -632,6 +670,14 @@ if run_clicked:
                 st.session_state.persona_selection,
                 st.session_state.request_text.strip(),
             )
+            if _local_tracing_requested():
+                flush_arize_tracing(shutdown=False)
+                if st.session_state.get("_ask_ari_local_tracing_status", {}).get(
+                    "enabled"
+                ):
+                    st.toast(
+                        f"Local trace exported: {st.session_state.last_result['trace_id']}"
+                    )
     else:
         st.error("Enter an employee request before running the workflow.")
 

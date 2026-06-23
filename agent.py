@@ -511,8 +511,19 @@ def run_agent(persona: str, request: str) -> dict[str, Any]:
         trace_id,
         {
             "intent": intent,
+            "customer": customer,
             "approval": approval,
+            "customer_scope": customer_scope,
             "risk": risk,
+            "selected_tables": selected_tables,
+            "tools_used": tools_used,
+            "has_sql": proposed_sql is not None,
+            "eval_matches": (
+                sum(item["match"] for item in eval_result.values())
+                if eval_result
+                else 0
+            ),
+            "eval_total": len(eval_result),
             "tool_count": len(tools_used),
         },
     )

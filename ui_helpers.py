@@ -1,108 +1,142 @@
+"""Small presentation helpers for the response-first Streamlit UI."""
+
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any
 
 
-def load_adobe_mark(logo_path=None) -> str:
-    """Load local logo SVG if available; otherwise return a safe inline fallback."""
-    if logo_path is None:
-        logo_path = Path(__file__).parent / "assets" / "adobe-mark.svg"
-    else:
-        logo_path = Path(logo_path)
+TRACE_COLUMNS = [
+    "Step",
+    "What the user asked / input",
+    "What the agent inferred / output",
+]
 
-    if logo_path.exists():
-        return logo_path.read_text(encoding="utf-8")
-
-    return """
-    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" rx="7" fill="#D71920"/>
-      <path d="M16 7L25 25H19.5L16 17.5L12.5 25H7L16 7Z" fill="white"/>
-    </svg>
-    """
+ADOBE_MARK_FALLBACK = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 42" role="img" aria-label="Adobe fallback mark">
+  <rect width="48" height="42" rx="6" fill="#FA0F00"/>
+  <path fill="#FFFFFF" d="M10 32 22 10h4l12 22h-8l-2.4-4.8h-7.2L18 32h-8Zm12.8-10h2.4L24 19.3 22.8 22Z"/>
+</svg>
+""".strip()
 
 
-def split_safer_next_action(response: str):
-    """Split safer next action from a response if present."""
-    markers = [
-        "Safer next action:",
-        "**Safer next action:**",
-        "Safer next step:",
-        "**Safer next step:**",
+def load_adobe_mark(asset_path: Path) -> str:
+    """Return the Adobe mark SVG, falling back when deployment omits assets."""
+
+    if asset_path.exists():
+        return asset_path.read_text(encoding="utf-8")
+    return ADOBE_MARK_FALLBACK
+
+
+def _pretty(value: str) -> str:
+    return value.replace("_", " ").capitalize()
+
+
+def _join(values: list[str]) -> str:
+    return ", ".join(values) if values else "None"
+
+
+def eval_checklist(result: dict[str, Any]) -> list[str]:
+    """Return a screenshot-friendly canonical eval summary."""
+
+    if not result["eval_target"]:
+        return ["No labeled eval target."]
+    labels = {
+        "intent": "Intent",
+        "selected_tables": "Tables",
+        "approval": "Approval",
+        "customer_scope": "Scope",
+    }
+    return [
+        f"{label} {'✅' if result['eval_result'][key]['match'] else '❌'}"
+        for key, label in labels.items()
     ]
 
-    for marker in markers:
-        if marker in response:
-            before, after = response.split(marker, 1)
-            return before.strip(), after.strip()
 
-    return response, None
+def split_safer_next_action(response: str) -> tuple[str, str | None]:
+    """Separate rejection guidance so the UI can emphasize it."""
+
+    marker = "**Safer next action:**"
+    if marker not in response:
+        return response, None
+    body, action = response.split(marker, 1)
+    return body.rstrip(), action.strip()
 
 
-def build_decision_rows(result: dict, persona=None):
-    """Build PM-friendly audit-ready decision record rows for Streamlit display."""
-    tools_used = result.get("tools_used", [])
-    if isinstance(tools_used, list):
-        tool_names = []
-        for tool in tools_used:
-            if isinstance(tool, dict):
-                tool_names.append(tool.get("tool") or tool.get("name") or str(tool))
-            else:
-                tool_names.append(str(tool))
-        tools_text = ", ".join(tool_names) if tool_names else "None"
+def build_decision_rows(
+    result: dict[str, Any], persona_context: dict[str, Any]
+) -> list[dict[str, str]]:
+    """Create a curated input/output decision record from structured results."""
+
+    customer = result.get("customer") or "Not inferred"
+    assigned_scope = _join(persona_context["assigned_customers"])
+    tables = _join(result["selected_tables"])
+    tools = _join(result["tools_used"])
+
+    if result["customer_scope"] == "clarification_required":
+        policy_output = "Not evaluated until the request is clarified."
+    elif result["approval"] == "pending":
+        policy_output = "Restricted data requires temporary approval."
+    elif result["approval"] == "rejected":
+        policy_output = "Access blocked by employee access or data policy."
     else:
-        tools_text = str(tools_used)
+        policy_output = "Access policy passed."
 
-    selected_tables = result.get("selected_tables", [])
-    if isinstance(selected_tables, list):
-        tables_text = ", ".join(str(item) for item in selected_tables) if selected_tables else "None"
-    else:
-        tables_text = str(selected_tables)
-
-    validation_target = result.get("validation_target") or result.get("eval_target") or {}
-    validation_result = result.get("validation_result") or result.get("eval_result") or {}
-
-    if validation_result:
-        validation_text = ", ".join(
-            f"{key}: {'✅' if value else '❌'}"
-            for key, value in validation_result.items()
-            if isinstance(value, bool)
+    if result["approval"] == "pending":
+        approval_output = (
+            "Status: Pending · Sarah Kim, Customer Data Governance Manager · "
+            "Approval Queue + Slack DM + Email · Duration: 4 hours"
         )
-        if not validation_text:
-            validation_text = str(validation_result)
-    elif validation_target:
-        validation_text = "Validation target defined"
     else:
-        validation_text = "No labeled validation target"
+        approval_output = f"Approval: {_pretty(result['approval'])}"
 
-    persona_text = persona or result.get("persona") or "Selected persona"
+    target = result["eval_target"]
+    if target:
+        eval_input = (
+            f"Intent: {target['expected_intent']} · "
+            f"Tables: {_join(target['expected_tables'])} · "
+            f"Approval: {target['expected_approval']} · "
+            f"Scope: {target['expected_customer_scope']}"
+        )
+    else:
+        eval_input = "No canonical target"
 
     return [
         {
             "Step": "Classification",
-            "Input": result.get("user_asked", "Employee request"),
-            "Output": result.get("agent_inferred", result.get("intent", "Unknown")),
+            "What the user asked / input": result["user_asked"],
+            "What the agent inferred / output": (
+                f"What the agent inferred: {result['agent_inferred']}\n"
+                f"Intent: {result['intent']}\nCustomer: {customer}"
+            ),
         },
         {
-            "Step": "Customer scope",
-            "Input": f"{persona_text} → {result.get('customer_scope', 'Not determined')}",
-            "Output": result.get("customer_scope", "Not determined"),
+            "Step": "Employee access",
+            "What the user asked / input": (
+                f"Persona: {persona_context['name']} · Employee access: {assigned_scope}"
+            ),
+            "What the agent inferred / output": (
+                f"Customer: {customer} · Decision: {_pretty(result['customer_scope'])}"
+            ),
         },
         {
             "Step": "Access policy",
-            "Input": tables_text,
-            "Output": result.get("approval", "Unknown"),
+            "What the user asked / input": f"Data sources considered: {tables}",
+            "What the agent inferred / output": policy_output,
         },
         {
             "Step": "Tools and data",
-            "Input": tools_text,
-            "Output": tables_text,
+            "What the user asked / input": f"Selected tools: {tools}",
+            "What the agent inferred / output": f"Selected data sources: {tables}",
         },
         {
             "Step": "Approval",
-            "Input": result.get("intent", "Unknown"),
-            "Output": f"{result.get('approval', 'Unknown')} · Risk: {result.get('risk', 'Unknown')}",
+            "What the user asked / input": f"Risk level: {_pretty(result['risk'])}",
+            "What the agent inferred / output": approval_output,
         },
         {
-            "Step": "Validation",
-            "Input": str(validation_target) if validation_target else "No labeled target",
-            "Output": validation_text,
+            "Step": "Evaluation",
+            "What the user asked / input": eval_input,
+            "What the agent inferred / output": " · ".join(eval_checklist(result)),
         },
     ]

@@ -190,6 +190,20 @@ def test_every_run_has_an_observable_workflow_trace():
     assert "classification.completed" in steps
     assert any(step.startswith("tool.") for step in steps)
     assert steps[-1] == "workflow.completed"
+    completed_payload = first["trace_log"][-1]["payload"]
+    assert completed_payload["customer"] == "Disney"
+    assert completed_payload["customer_scope"] == "authorized"
+    assert completed_payload["selected_tables"] == [
+        "customer_accounts",
+        "support_tickets",
+        "jira_bugs",
+        "product_telemetry",
+        "campaign_performance",
+    ]
+    assert completed_payload["tools_used"] == first["tools_used"]
+    assert completed_payload["has_sql"] is False
+    assert completed_payload["eval_matches"] == 4
+    assert completed_payload["eval_total"] == 4
 
 
 def test_eval_dataset_has_twenty_labeled_cases():

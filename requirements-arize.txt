@@ -1,0 +1,6 @@
+arize
+certifi
+openinference-instrumentation
+opentelemetry-api
+opentelemetry-sdk
+arize-otel

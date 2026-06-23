@@ -18,7 +18,7 @@ This is a demo sandbox, not a production Adobe integration.
 - A local validation runner that checks intent, tables, approval, and customer scope, then writes `validation_results.csv`.
 - Aggregate-only SQL for the numerical analysis scenario; all other scenarios return `proposed_sql = None`.
 
-Phoenix/Arize integration is not active yet. This repo prepares the tracing and validation contracts so a future integration step can plug into Phoenix without changing the local demo.
+Phoenix/Arize is still optional and not required by the Streamlit app. The repo also includes optional Step 2 runners for exporting traces and running dataset experiments in Arize when you install `requirements-arize.txt` and provide Arize credentials.
 
 ## Local Run
 
@@ -44,7 +44,7 @@ The app imports Streamlit and local Python modules only. It does not import or r
 
 ```bash
 source .venv/bin/activate
-pytest -q
+python -m pytest -q
 ```
 
 The suite verifies all eight canonical demos, all twenty validation rows, trace lifecycle ordering, governance rejections, clarification behavior, SQL isolation, local validation output, and the optional integration stub.
@@ -64,6 +64,57 @@ Results written to validation_results.csv
 ```
 
 `validation_results.csv` is regenerated on every run and ignored by Git. Each row includes its trace ID, expected and actual values, four match flags, and an overall pass result.
+
+## Build the Arize dataset CSV
+
+```bash
+source .venv/bin/activate
+python build_arize_dataset.py
+```
+
+This writes `arize_ask_ari_dataset.csv`, a 20-row upload file derived from `validation_cases.csv`.
+
+Upload it in Arize:
+
+1. Go to **Develop → Datasets & Experiments**.
+2. Click **+ New Dataset**.
+3. Choose **Upload CSV**.
+4. Upload `arize_ask_ari_dataset.csv`.
+5. Name the dataset `ask-ari-validation-cases`.
+
+The CSV includes the employee request as `attributes.input.value`, persona and case metadata, and expected labels for intent, selected tables, approval path, and customer scope.
+
+## Run the Arize experiment
+
+Use this after uploading `arize_ask_ari_dataset.csv` as a dataset named `ask-ari-validation-cases`.
+
+This is the right path for Ask Ari because the workflow is a custom Python agent: it performs classification, access checks, tool selection, approval routing, and response generation. Arize Playground is better for prompt-only experiments. For this use case, run the agent as code and attach deterministic evaluators.
+
+```bash
+source .venv/bin/activate
+pip install -r requirements-arize.txt
+
+export ARIZE_SPACE_ID="your-space-id"
+export ARIZE_API_KEY="your-api-key"
+export ARIZE_DATASET_NAME="ask-ari-validation-cases"
+export ARIZE_EXPERIMENT_NAME="ask-ari-v0-deterministic-router"
+
+python run_arize_experiment.py
+```
+
+The runner calls `run_agent()` for every dataset row and logs four code-eval columns:
+
+- `intent_match`
+- `tables_match`
+- `approval_match`
+- `customer_scope_match`
+
+To test the loop before logging a real experiment, add:
+
+```bash
+export ARIZE_DRY_RUN=true
+python run_arize_experiment.py
+```
 
 ## Deploying to Streamlit Community Cloud
 
@@ -87,6 +138,9 @@ No secrets are required for the local demo. Phoenix, Arize, OpenTelemetry, and O
 | `tracing.py` | Single local tracing boundary: workflow start, ordered steps, workflow end, and trace retrieval |
 | `run_validation_checks.py` | Executable deterministic validation runner and CSV result writer |
 | `integration_stub.py` | Import-safe, explicitly inactive future Phoenix/Arize integration boundaries |
+| `run_phoenix_experiment.py` | Optional bulk trace generator for Arize/OpenTelemetry tracing |
+| `run_arize_experiment.py` | Optional Arize dataset experiment runner with deterministic code evaluators |
+| `requirements-arize.txt` | Optional packages for Arize tracing and experiment runs |
 | `validation_cases.csv` | Twenty labeled local examples |
 | `requirements.txt` | Minimal packages required to run the app and tests |
 | `tests/` | Agent, governance, trace, UI contract, validation, and optional-integration tests |
@@ -120,28 +174,29 @@ The walkthrough narrative is:
 
 > deterministic demo → model boundary → trace log → validation target → validation result → product recommendations
 
-## How to plug this into Arize/Phoenix
+## How this plugs into Arize/Phoenix
 
-Phoenix/Arize integration is not active yet. `integration_stub.py` is an honest map of future Step 2, not a working remote integration. Importing the stub performs no network call and requires no optional package.
+Phoenix/Arize integration is not active by default. The app, tests, and local validation flow run without Arize, Phoenix, OpenTelemetry, or OpenInference installed. `integration_stub.py` remains an import-safe map of the integration boundary and performs no network call.
 
-The repo prepares Step 2 in four ways:
+The repo supports Step 2 in these ways:
 
 1. `tracing.py` centralizes workflow start, step, and end events. Its TODO markers show where OpenInference/OpenTelemetry spans and Phoenix export can be added.
-2. `validation_cases.csv` provides a labeled dataset that can be created or loaded in Phoenix.
-3. `run_agent()` returns stable fields and a trace ID for each experiment row.
-4. `run_validation_checks.py` demonstrates the exact deterministic comparisons that can become Phoenix code evaluators.
+2. `run_phoenix_experiment.py` can generate multiple Ask Ari workflow traces into Arize when optional tracing credentials are configured.
+3. `validation_cases.csv` provides a labeled dataset that can be created or loaded in Arize/Phoenix.
+4. `run_arize_experiment.py` runs `run_agent()` against that dataset and attaches deterministic code evaluators for intent, tables, approval, and customer scope.
+5. `run_agent()` returns stable fields and a trace ID for each experiment row.
 
-Future Step 2 would:
+The Step 2 development workflow is:
 
-1. Install and configure the Phoenix/Arize client separately.
-2. Export `start_workflow`, `trace_step`, and `end_workflow` as OpenInference/OpenTelemetry spans and events.
-3. Create or load a Phoenix dataset from `validation_cases.csv`.
-4. Run `run_agent()` against each dataset example as an experiment.
-5. Attach deterministic code evaluators for intent, table selection, approval, and customer scope.
-6. Add LLM-as-judge evaluators for subjective response quality such as groundedness, actionability, executive readiness, and policy explanation.
-7. Log experiment and validation results back to Phoenix.
+1. Upload `arize_ask_ari_dataset.csv` as `ask-ari-validation-cases`.
+2. Run `run_arize_experiment.py` to create the baseline deterministic experiment.
+3. Review evaluator failures by intent, table selection, approval path, and customer scope.
+4. Change the classifier, prompt, policy rules, or model boundary.
+5. Re-run with a new `ARIZE_EXPERIMENT_NAME`.
+6. Compare baseline vs. candidate experiments in Arize.
+7. Add LLM-as-judge evaluators later for subjective response quality such as groundedness, actionability, executive readiness, and policy explanation.
 
-That remote work is intentionally left as **your step 2**. The local app, tests, and validation runner remain fully usable when Phoenix and Arize are not installed or configured.
+The local app, tests, and validation runner remain fully usable when Phoenix and Arize are not installed or configured.
 
 ## Five-minute PM walkthrough
 

@@ -169,6 +169,19 @@ def test_primary_cta_is_centered_and_employee_facing():
     assert "button_left, button_center, button_right = st.columns([1, 1.2, 1])" in source
 
 
+def test_local_tracing_hook_is_environment_gated_and_ui_silent():
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+
+    assert "ASK_ARI_ENABLE_ARIZE_TRACING" in source
+    assert "_enable_local_tracing_if_requested()" in source
+    assert "enable_arize_tracing()" in source
+    assert "flush_arize_tracing(shutdown=False)" in source
+    assert "from arize" not in source
+    assert "from phoenix" not in source
+    assert "Arize" not in source
+    assert "Phoenix" not in source
+
+
 def test_request_textarea_overrides_host_theme_text_colors():
     source = (ROOT / "app.py").read_text(encoding="utf-8")
     textarea_rule = source.split(
@@ -212,7 +225,8 @@ def test_readme_explains_model_relevance_and_arize_handoff():
         "response synthesis",
     ):
         assert capability in readme
-    assert "your step 2" in readme
+    assert "Step 2" in readme
+    assert "run_arize_experiment.py" in readme
 
 
 def test_readme_separates_local_capabilities_from_future_phoenix_work():
@@ -222,9 +236,10 @@ def test_readme_separates_local_capabilities_from_future_phoenix_work():
     assert "## Local Run" in readme
     assert "## Run validation checks" in readme
     assert "## Deploying to Streamlit Community Cloud" in readme
-    assert "## How to plug this into Arize/Phoenix" in readme
-    assert "Phoenix/Arize integration is not active yet" in readme
+    assert "## How this plugs into Arize/Phoenix" in readme
+    assert "Phoenix/Arize integration is not active by default" in readme
     assert "python run_validation_checks.py" in readme
+    assert "python run_arize_experiment.py" in readme
     assert "LLM-as-judge" in readme
 
 
